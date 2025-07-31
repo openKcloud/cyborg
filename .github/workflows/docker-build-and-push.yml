@@ -25,6 +25,7 @@ jobs:
       PROJECT_REF: stable/2024.1
       DIST_PACKAGES: pciutils
       IMAGE_NAME: cyborg
+      IMAGE_TAG: stable-2024.1
 
     steps:
       - name: Checkout Cyborg source
@@ -102,9 +103,9 @@ jobs:
             --build-arg PROJECT_REPO=${{ env.PROJECT_REPO }} \
             --build-arg PROJECT_REF=${{ env.PROJECT_REF }} \
             --build-arg DIST_PACKAGES=${{ env.DIST_PACKAGES }} \
-            --tag ghcr.io/${{ env.OWNER_ID_LOWER }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }} \
+            --tag ghcr.io/${{ env.OWNER_ID_LOWER }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} \
             loci
 
       - name: Push Cyborg image to GHCR
         run: |
-          docker push ghcr.io/${{ env.OWNER_ID_LOWER }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
+          docker push ghcr.io/${{ env.OWNER_ID_LOWER }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
