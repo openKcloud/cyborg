@@ -7,22 +7,21 @@ on:
 
 jobs:
   build-and-push:
-    if: github.repository_owner == 'openKcloud'
+    if: github.repository_owner == 'openkcloud'
     
     runs-on: ubuntu-latest
 
     env:
-      OWNER_ID_LOWER: openkcloud
-      BASE_IMAGE_NAME: base
+      BASE_IMAGE_NAME: kcloud-cyborg_base
       BASE_IMAGE_TAG: ubuntu_jammy
-      REQUIREMENTS_IMAGE_NAME: requirements
+      REQUIREMENTS_IMAGE_NAME: kcloud-cyborg_requirements
       REQUIREMENTS_IMAGE_TAG: stable-2024.1-ubuntu_jammy
       REQUIREMENTS_REF: stable/2024.1
       PROJECT: cyborg
       PROJECT_REPO: https://github.com/${{ github.repository }}
       PROJECT_REF: stable/2024.1
       DIST_PACKAGES: pciutils
-      IMAGE_NAME: cyborg
+      IMAGE_NAME: ${{ github.event.repository.name }}
       IMAGE_TAG: stable-2024.1
 
     steps:
@@ -37,13 +36,13 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: ${{ env.OWNER_ID_LOWER }}
+          username: ${{ github.repository_owner }}
           password: ${{ secrets.CR_PAT }}
 
       - name: Check if Base image exists in GHCR
         id: check-base-image
         run: |
-          if docker manifest inspect ghcr.io/${{ env.OWNER_ID_LOWER }}/${{ env.BASE_IMAGE_NAME }}:${{ env.BASE_IMAGE_TAG }} > /dev/null 2>&1; then
+          if docker manifest inspect ghcr.io/${{ github.repository_owner }}/${{ env.BASE_IMAGE_NAME }}:${{ env.BASE_IMAGE_TAG }} > /dev/null 2>&1; then
             echo "exists=true" >> $GITHUB_OUTPUT
           else
             echo "exists=false" >> $GITHUB_OUTPUT
@@ -56,18 +55,18 @@ jobs:
             -f loci/Dockerfile.base \
             --build-arg FROM=ubuntu:jammy \
             --build-arg CEPH_REPO='deb https://download.ceph.com/debian-reef/ jammy main' \
-            --tag ghcr.io/${{ env.OWNER_ID_LOWER }}/${{ env.BASE_IMAGE_NAME }}:${{ env.BASE_IMAGE_TAG }} \
+            --tag ghcr.io/${{ github.repository_owner }}/${{ env.BASE_IMAGE_NAME }}:${{ env.BASE_IMAGE_TAG }} \
             loci
 
       - name: Push Base image to GHCR
         if: steps.check-base-image.outputs.exists == 'false'
         run: |
-          docker push ghcr.io/${{ env.OWNER_ID_LOWER }}/${{ env.BASE_IMAGE_NAME }}:${{ env.BASE_IMAGE_TAG }}
+          docker push ghcr.io/${{ github.repository_owner }}/${{ env.BASE_IMAGE_NAME }}:${{ env.BASE_IMAGE_TAG }}
 
       - name: Check if Requirements image exists in GHCR
         id: check-requirements-image
         run: |
-          if docker manifest inspect ghcr.io/${{ env.OWNER_ID_LOWER }}/${{ env.REQUIREMENTS_IMAGE_NAME }}:${{ env.REQUIREMENTS_IMAGE_TAG }} > /dev/null 2>&1; then
+          if docker manifest inspect ghcr.io/${{ github.repository_owner }}/${{ env.REQUIREMENTS_IMAGE_NAME }}:${{ env.REQUIREMENTS_IMAGE_TAG }} > /dev/null 2>&1; then
             echo "exists=true" >> $GITHUB_OUTPUT
           else
             echo "exists=false" >> $GITHUB_OUTPUT
@@ -79,30 +78,30 @@ jobs:
           docker build \
             -f loci/Dockerfile \
             --target requirements \
-            --build-arg FROM=ghcr.io/${{ env.OWNER_ID_LOWER }}/${{ env.BASE_IMAGE_NAME }}:${{ env.BASE_IMAGE_TAG }} \
+            --build-arg FROM=ghcr.io/${{ github.repository_owner }}/${{ env.BASE_IMAGE_NAME }}:${{ env.BASE_IMAGE_TAG }} \
             --build-arg PROJECT=requirements \
             --build-arg PROJECT_REF=${{ env.REQUIREMENTS_REF }} \
-            --tag ghcr.io/${{ env.OWNER_ID_LOWER }}/${{ env.REQUIREMENTS_IMAGE_NAME }}:${{ env.REQUIREMENTS_IMAGE_TAG }} \
+            --tag ghcr.io/${{ github.repository_owner }}/${{ env.REQUIREMENTS_IMAGE_NAME }}:${{ env.REQUIREMENTS_IMAGE_TAG }} \
             loci
 
       - name: Push Requirements image to GHCR
         if: steps.check-requirements-image.outputs.exists == 'false'
         run: |
-          docker push ghcr.io/${{ env.OWNER_ID_LOWER }}/${{ env.REQUIREMENTS_IMAGE_NAME }}:${{ env.REQUIREMENTS_IMAGE_TAG }}
+          docker push ghcr.io/${{ github.repository_owner }}/${{ env.REQUIREMENTS_IMAGE_NAME }}:${{ env.REQUIREMENTS_IMAGE_TAG }}
 
       - name: Build Cyborg image
         run: |
           docker build \
             -f loci/Dockerfile \
-            --build-arg FROM=ghcr.io/${{ env.OWNER_ID_LOWER }}/${{ env.BASE_IMAGE_NAME }}:${{ env.BASE_IMAGE_TAG }} \
-            --build-arg WHEELS=ghcr.io/${{ env.OWNER_ID_LOWER }}/${{ env.REQUIREMENTS_IMAGE_NAME }}:${{ env.REQUIREMENTS_IMAGE_TAG }} \
+            --build-arg FROM=ghcr.io/${{ github.repository_owner }}/${{ env.BASE_IMAGE_NAME }}:${{ env.BASE_IMAGE_TAG }} \
+            --build-arg WHEELS=ghcr.io/${{ github.repository_owner }}/${{ env.REQUIREMENTS_IMAGE_NAME }}:${{ env.REQUIREMENTS_IMAGE_TAG }} \
             --build-arg PROJECT=${{ env.PROJECT }} \
             --build-arg PROJECT_REPO=${{ env.PROJECT_REPO }} \
             --build-arg PROJECT_REF=${{ env.PROJECT_REF }} \
             --build-arg DIST_PACKAGES=${{ env.DIST_PACKAGES }} \
-            --tag ghcr.io/${{ env.OWNER_ID_LOWER }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} \
+            --tag ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} \
             loci
 
       - name: Push Cyborg image to GHCR
         run: |
-          docker push ghcr.io/${{ env.OWNER_ID_LOWER }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          docker push ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
